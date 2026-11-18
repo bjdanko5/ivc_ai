@@ -63,3 +63,8 @@ chown -R $USER:$USER /opt/ivc_ai
 - [ ] Выполнена базовая установка ОС
 - [ ] Установлены драйверы NVIDIA
 - [ ] Настроен доступ по SSH
+
+## Связи
+- [[Project Map]]
+- [[Hardware Specs]]
+- [[Local AI Setup]]
