@@ -1,0 +1,26 @@
+name: Models Registry
+description: All local AI models
+columns:
+  - property: topic
+    label: Model Name
+  - property: model
+    label: HF/GGUF ID
+  - property: created
+    label: Added
+  - property: tags
+    label: Tags
+sort:
+  - property: created
+    direction: desc
+views:
+  - type: table
+    name: представление
+    filters:
+      and:
+        - file.tags.containsAny("model")
+    order:
+      - file.name
+      - file.tags
+    sort:
+      - property: file.tags
+        direction: DESC

@@ -1,0 +1,21 @@
+name: Knowledge Base
+description: All knowledge notes
+columns:
+  - property: topic
+    label: Topic
+  - property: created
+    label: Created
+  - property: tags
+    label: Tags
+sort:
+  - property: created
+    direction: desc
+views:
+  - type: table
+    name: представление
+    filters:
+      and:
+        - file.tags.contains("knowledge")
+    order:
+      - file.name
+      - file.tags

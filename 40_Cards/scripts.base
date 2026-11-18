@@ -1,0 +1,22 @@
+name: Script Cards
+description: All script cards
+columns:
+  - property: topic
+    label: Script Name
+  - property: lang
+    label: Language
+  - property: path
+    label: Path
+  - property: created
+    label: Created
+  - property: tags
+    label: Tags
+sort:
+  - property: created
+    direction: desc
+views:
+  - type: table
+    name: представление
+    filters:
+      and:
+        - file.tags.containsAny("script")
