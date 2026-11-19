@@ -18,6 +18,7 @@ updated: 2026-11-19
 | 90_Templates | шаблоны | mknote.py |
 | tools | утилиты vault, включая run_wiki_lan.py | без нужды не трогать |
 | logs | пусто (генерация отчётов отключена) | - |
+| 10_Projects/ivc_ai/sync_ops | Git-синхронизация: задача, пауза, траблы | по факту изменений |
 
 ## Frontmatter и Bases
 - Схема: type / project / topic / tags / created / updated.

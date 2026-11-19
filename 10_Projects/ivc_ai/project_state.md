@@ -20,6 +20,8 @@ updated: 2026-11-19
 - 2026-11-19: единая схема frontmatter + топиковые теги (models и др.).
 - 2026-11-19: лаунчер сайта постоянный - tools/run_wiki_lan.py.
 
+- 2026-11-19: механика автосинхронизации описана в sync_ops (факты обнаружены скриптом).
+
 ## Следующие шаги
 1. Поставка и сборка.
 2. [[01_BIOS_Preparation]] - [[02_Debian_Installation]].
@@ -29,6 +31,7 @@ updated: 2026-11-19
 
 ## Связи
 - [[vault_map]]
+- [[sync_ops]]
 - [[site_ops]]
 - [[chat_playbook]]
 - [[hardware_procurement]]
