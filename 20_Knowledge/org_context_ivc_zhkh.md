@@ -69,4 +69,4 @@ IT-аккредитованная организация (Реестр росс�
 
 - [[ai_chat_rules]]
 - [[client_ws024]]
-- [[server_debian_profile]]
+- [[03_System_Configuration]]

@@ -55,5 +55,5 @@ SSH config (~/.ssh/config):
 
 ## Связанные
 
-- [[ssh_remote_setup]]
-- [[server_debian_profile]]
+- [[09_Client_File_Delivery]]
+- [[03_System_Configuration]]
