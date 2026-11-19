@@ -22,18 +22,18 @@ updated: 2026-11-19
 - GRUB: Да, /dev/nvme0n1 (UEFI сам найдёт ESP). Перезагрузка, флешку вынуть.
 
 ## Разметка (Manual)
-| # | Устройство | Размер | ФС | Точка |
-|---|---|---|---|---|
-| 1 | nvme0n1p1 | 1 GiB | FAT32 ESP | /boot/efi |
-| 2 | nvme0n1p2 | 2 GiB | ext4 | /boot |
-| 3 | nvme0n1p3 | ~830 GiB | LVM PV | - |
-| - | vg0/lv_root | 60 GiB | ext4 | / |
-| - | vg0/lv_var | 30 GiB | ext4 | /var (reserved 1%) |
-| - | vg0/lv_docker | 150 GiB | do not use | - |
-| - | vg0/lv_home | 400 GiB | do not use | - |
-| - | vg0/lv_swap | 8 GiB | swap | - |
-| - | VG свободно | ~182 GiB | резерв | lvextend -r |
-| - | неразмечено | ~100 GiB | overprovisioning NVMe | - |
+| #   | Устройство    | Размер   | ФС                    | Точка              |
+| --- | ------------- | -------- | --------------------- | ------------------ |
+| 1   | nvme0n1p1     | 1 GiB    | FAT32 ESP             | /boot/efi          |
+| 2   | nvme0n1p2     | 2 GiB    | ext4                  | /boot              |
+| 3   | nvme0n1p3     | ~830 GiB | LVM PV                | -                  |
+| -   | vg0/lv_root   | 60 GiB   | ext4                  | /                  |
+| -   | vg0/lv_var    | 30 GiB   | ext4                  | /var (reserved 1%) |
+| -   | vg0/lv_docker | 150 GiB  | do not use            | -                  |
+| -   | vg0/lv_home   | 400 GiB  | do not use            | -                  |
+| -   | vg0/lv_swap   | 8 GiB    | swap                  | -                  |
+| -   | VG свободно   | ~182 GiB | резерв                | lvextend -r        |
+| -   | неразмечено   | ~100 GiB | overprovisioning NVMe | -                  |
 
 lv_docker и lv_home НЕ форматировать в установщике: это делает Этап Б (07) с mkfs.ext4 -F -m 1 и миграцией старого home в /var/tmp/ivc_home_old. Причина отсрочки - контроль над форматированием и безопасный перенос, а не плотность inode.
 /tmp отдельным разделом не делаем: в trixie tmpfs, Этап А маскирует tmp.mount.
