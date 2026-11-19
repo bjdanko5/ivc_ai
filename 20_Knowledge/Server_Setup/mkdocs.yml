@@ -1,0 +1,31 @@
+
+site_name: IVC AI Server Setup Guide
+site_description: Пошаговое руководство по установке Debian 13 на RTX 5070 Ti
+
+theme:
+  name: material
+  language: ru
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Главная: index.md
+  - Этапы установки:
+    - 01. BIOS и подготовка: 01_BIOS_Preparation.md
+    - 02. Установка Debian: 02_Debian_Installation.md
+    - 03. Базовая настройка: 03_System_Configuration.md
+    - 04. Драйверы NVIDIA: 04_NVIDIA_Drivers.md
+    - 05. Инструменты ИИ: 05_AI_Tools_Setup.md
+    - 06. Решение проблем с сетью: 06_Network_Fix_USB_Modem.md
+    - 07. Скрипты автоматизации: 07_Automation_Scripts.md
+    - 08. Профиль оборудования: 08_Hardware_Profile.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
