@@ -22,6 +22,7 @@ nav:
     - 06. Решение проблем с сетью: 06_Network_Fix_USB_Modem.md
     - 07. Скрипты автоматизации: 07_Automation_Scripts.md
     - 08. Профиль оборудования: 08_Hardware_Profile.md
+    - 09. Доставка файлов с клиента: 09_Client_File_Delivery.md
 
 markdown_extensions:
   - pymdownx.highlight:
