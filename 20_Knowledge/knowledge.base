@@ -15,7 +15,7 @@ views:
     name: представление
     filters:
       and:
-        - file.tags.contains("knowledge")
+        - file.folder.contains("20_Knowledge")
     order:
       - file.name
       - file.tags

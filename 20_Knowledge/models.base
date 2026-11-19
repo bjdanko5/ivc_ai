@@ -15,9 +15,6 @@ sort:
 views:
   - type: table
     name: представление
-    filters:
-      and:
-        - file.tags.containsAny("model")
     order:
       - file.name
       - file.tags
