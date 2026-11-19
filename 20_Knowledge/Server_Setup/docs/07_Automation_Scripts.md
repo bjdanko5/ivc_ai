@@ -10,19 +10,16 @@ tags:
 # Скрипты автоматизации настройки сервера
 
 ## Этап А: До первой перезагрузки
-Запускается сразу после установки системы. Устанавливает драйвер NVIDIA (ветка 620) и обновляет репозитории.
+Устанавливает драйвер NVIDIA и обновляет репозитории. Все временные файлы сохраняются в `/var/cache`, чтобы пережить перезагрузку.
 
 ```bash
 #!/bin/bash
 set -e
 
 echo "=== ЭТАП А: Базовая настройка и драйвер NVIDIA ==="
-read -p "Убедитесь, что интернет работает (USB-модем). Нажмите Enter..."
+read -p "Убедитесь, что интернет работает. Нажмите Enter..."
 
-# 1. Создание структуры каталогов
-mkdir -p ~/src ~/downloads ~/models ~/projects
-
-# 2. Обновление репозиториев
+# 1. Обновление репозиториев
 echo "[+] Обновление sources.list..."
 if [ -f /etc/apt/sources.list.d/debian.sources ]; then
     sudo sed -i 's/^Components:\(.*\)$/Components:\1 contrib non-free/' /etc/apt/sources.list.d/debian.sources
@@ -33,20 +30,19 @@ fi
 sudo apt update
 sudo apt full-upgrade -y
 
-# 3. Установка инструментов сборки
+# 2. Установка инструментов сборки
 echo "[+] Установка build-essential и headers..."
-sudo apt install -y linux-headers-amd64 build-essential dkms pkg-config git cmake libssl-dev rsync zip gdb ninja-build python3-venv python3-dev
+sudo apt install -y linux-headers-amd64 build-essential dkms pkg-config git cmake libssl-dev rsync zip gdb ninja-build python3-venv python3-dev wget curl
 
-# 4. Отключение tmpfs для /tmp
-echo "[+] Маскировка tmp.mount..."
-sudo systemctl mask tmp.mount
+# 3. Создание временной папки на диске (не в RAM)
+TEMP_DIR="/var/cache/ivc_ai_install"
+sudo mkdir -p $TEMP_DIR
+cd $TEMP_DIR
 
-# 5. Установка драйвера NVIDIA
+# 4. Установка драйвера NVIDIA
 echo "[+] Установка CUDA Keyring и драйвера ветки 620..."
-cd ~/downloads
 wget https://developer.download.nvidia.com/compute/cuda/repos/debian13/x86_64/cuda-keyring_1.1-1_all.deb
 sudo dpkg -i cuda-keyring_1.1-1_all.deb
-rm cuda-keyring_1.1-1_all.deb
 
 sudo apt update
 sudo apt install -y nvidia-driver-pinning-620
@@ -59,7 +55,7 @@ sudo reboot
 ```
 
 ## Этап Б: После перезагрузки
-Форматирует LVM-тома, настраивает Docker, zram, Node.js, pnpm, uv и собирает llama.cpp.
+Форматирует LVM-тома, настраивает Docker, zram, языки программирования и собирает llama.cpp.
 
 **Внимание:** Этот скрипт удаляет данные на томах Docker и Home!
 
@@ -81,13 +77,19 @@ if [ "$CONFIRM" == "yes" ]; then
     sleep 5
     sudo umount /home 2>/dev/null || true
     sudo umount /var/lib/docker 2>/dev/null || true
+    
+    # Форматирование с оптимизацией под множество мелких файлов (-T news)
     sudo mkfs.ext4 -T news -m 1 -L docker /dev/vg0/lv_docker
     sudo mkfs.ext4 -T news -m 1 -L home /dev/vg0/lv_home
+    
+    # Добавляем в fstab
     grep -q "lv_docker" /etc/fstab || echo "/dev/mapper/vg0-lv_docker  /var/lib/docker  ext4  defaults,noatime  0  2" | sudo tee -a /etc/fstab
     grep -q "lv_home" /etc/fstab || echo "/dev/mapper/vg0-lv_home    /home            ext4  defaults,noatime  0  2" | sudo tee -a /etc/fstab
+    
     sudo mkdir -p /var/lib/docker /home
     sudo mount -a
     sudo chown $USER:$USER /home/$USER
+    
     sudo systemctl default
     sleep 5
     echo "[+] Тома отформатированы и смонтированы."
@@ -95,7 +97,19 @@ else
     echo "Форматирование пропущено."
 fi
 
-# 3. zram
+# 3. Перенос временных файлов с системного диска на домашний (для истории/бэкапа)
+if [ -d "/var/cache/ivc_ai_install" ]; then
+    echo "[+] Перенос установочных файлов драйвера в ~/downloads..."
+    mkdir -p ~/downloads/install_backup
+    sudo mv /var/cache/ivc_ai_install/* ~/downloads/install_backup/
+    sudo rm -rf /var/cache/ivc_ai_install
+    sudo chown -R $USER:$USER ~/downloads/install_backup
+fi
+
+# 4. Создание рабочих папок (теперь они на новом быстром диске)
+mkdir -p ~/src ~/downloads ~/models ~/projects
+
+# 5. zram
 sudo apt install -y systemd-zram-generator
 cat <<EOF | sudo tee /etc/systemd/zram-generator.conf
 [zram0]
@@ -105,7 +119,7 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl start /dev/zram0
 
-# 4. Docker
+# 6. Docker
 sudo apt install -y ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
@@ -131,7 +145,7 @@ EOF
 sudo systemctl restart docker
 sudo usermod -aG docker $USER
 
-# 5. NVIDIA Container Toolkit
+# 7. NVIDIA Container Toolkit
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
 curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
   sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
@@ -141,7 +155,7 @@ sudo apt install -y nvidia-container-toolkit
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 
-# 6. Языки программирования
+# 8. Языки программирования
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.41.0/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
@@ -149,7 +163,7 @@ nvm install --lts
 curl -fsSL https://get.pnpm.io | sh -
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 7. Сборка llama.cpp
+# 9. Сборка llama.cpp
 cd ~/src
 git clone https://github.com/ggml-org/llama.cpp
 cd llama.cpp
