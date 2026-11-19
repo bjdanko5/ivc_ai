@@ -1,60 +1,42 @@
 ---
-type: knowledge
-project: ivc_ai
-topic: hardware
-created: 2026-11-18
-updated: 2026-11-18
-tags: [knowledge, hardware, local_ai]
+created: 2026-11-19
+updated: 2026-11-19
+tags:
+  - server-setup
 ---
 
-# Hardware Profile (ivc_ai)
+# 08. Hardware Profile (ivc_ai)
 
-Закупка оформлена. Ожидается поставка.
+Закупка оформлена, ожидается поставка. Состав и статус - [[hardware_procurement]] (вне этой папки).
 
 ## Спецификация
 | Компонент | Модель | Ключевой параметр |
-| --- | --- | --- |
-| CPU | AMD Ryzen 9 9900X | 12 ядер / 24 потока, Zen 5 |
+|---|---|---|
+| CPU | AMD Ryzen 9 9900X BOX | 12C/24T, Zen 5, AVX-512 |
 | RAM | Silicon Power Xpower Zenith 64 GB DDR5 | UDIMM |
-| GPU | ASUS RTX 5070 Ti PRIME OC | 16 GB VRAM GDDR7 |
-| Storage | Kingston NV3 1 TB NVMe | M.2, модели + кэш |
-| PSU | DeepCool PN1000D | 1000W, ATX 3.x |
-| MB | ASUS PRIME B850-PLUS-CSM | AM5, DDR5 |
-| Cooler | Arctic Freezer 36-S | Воздух |
+| GPU | ASUS RTX 5070 Ti PRIME OC | 16 GB GDDR7 |
+| Storage | Kingston NV3 1 TB NVMe | QLC, DRAM-less, 320 TBW |
+| PSU | DeepCool GamerStorm PN1000D | 1000W ATX 3.x |
+| MB | ASUS PRIME B850-PLUS-CSM | AM5 |
+| Cooler | Arctic Freezer 36-S | воздух |
 | Case | Chieftec Night Hunter | ATX |
 
-## Совместимость с Cyber-Tiel-Coder-35B-A3B
-Модель: MoE 35B total / ~3B active params.
+## Совместимость с моделями (исправлено по 07)
+Основной выбор: NanoPlus (~12.55 ГБ) - помещается в 16 ГБ VRAM целиком вместе с mmproj и mtp; длинный ctx ограничивается KV, launcher подбирает конфигурацию (05, 07).
 
-### Расчёт по VRAM (16 GB RTX 5070 Ti)
-| Квантование | Вес файла | VRAM (оценка) | Влезает? | Рекомендация |
-| --- | --- | --- | --- | --- |
-| Q4_K_M | ~20 GB | ~6-8 GB | Да | основной выбор |
-| Q5_K_M | ~24 GB | ~8-10 GB | Да | если есть запас |
-| Q6_K | ~28 GB | ~10-12 GB | Да | максимум качества |
-| Q8_0 | ~35 GB | ~14-16 GB | На грани | только без контекста |
+MiniPlus-V2.1 (legacy, не используется): веса Q4_K_M ~20 ГБ, Q5_K_M ~24 ГБ, Q6_K ~28 ГБ, Q8_0 ~35 ГБ. Все больше 16 ГБ VRAM, полный GPU-offload невозможен; только hybrid (часть слоёв/experts в RAM). Прежняя таблица 'VRAM 6-16 GB, влезает' была ошибочной оценкой и удалена.
 
-MoE-модель загружает все веса в память, но активирует только ~3B.
-При 16 GB VRAM комфортно работают Q4_K_M – Q6_K с контекстом 8K+.
-
-## CPU Offload (резерв)
-При нехватке VRAM часть слоёв уходит в RAM через llama.cpp/Ollama.
-64 GB DDR5 + 12-ядерный 9900X позволяют offload без катастрофического падения скорости.
-Ожидаемая скорость при частичном offload: 5-10 t/s (vs 30-50 t/s pure GPU).
+CPU offload как резерв: 64 GB DDR5 + 12C позволяют hybrid без катастрофы по скорости; ориентир 5-10 t/s против 30-50 t/s на чистом GPU.
 
 ## Storage
-1 TB NVMe хватит на:
-- OS + софт: ~100 GB
-- Модели (3-4 квантования): ~100 GB
-- Vault + чаты + RAG индекс: ~50 GB
-- Резерв: ~750 GB
+OS+софт ~100 ГБ (lv_root 60 + lv_var 30), модели NanoPlus ~14 ГБ, Docker отдельно 150 ГБ, home 400 ГБ, VG-резерв ~182 ГБ, неразмечено ~100 ГБ под overprovisioning. Второй NVMe при необходимости (B850 имеет несколько M.2).
 
-## Итоговая рекомендация
-- **Основное квантование:** Q5_K_M (баланс качества и запаса VRAM)
-- **Резервное:** Q4_K_M (для длинного контекста >8K)
-- **Эмбеддинги:** bge-m3 FP16 (~2 GB VRAM, поместится вместе с основной моделью)
+## Структура на сервере
+/opt/ivc_ai/models и /opt/ivc_ai/llama.cpp - симлинки в ~/models и ~/src/llama.cpp; /opt/ivc_ai/pi и /opt/ivc_ai/logs - реальные каталоги (07).
 
 ## Связи
-- [[hardware_procurement]]
-- [[model_cyber_tiel_coder]]
-- [[model_registry]]
+- [[07_Automation_Scripts]]
+- [[05_AI_Tools_Setup]]
+- [[02_Debian_Installation]]
+- [[10_Walkthrough_Manual]]
+

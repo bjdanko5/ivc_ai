@@ -1,25 +1,44 @@
 ---
 created: 2026-11-19
+updated: 2026-11-19
 tags:
-  - network
-  - troubleshooting
-  - realtek
+  - server-setup
 ---
 
-# Экстренное подключение: USB-модем (Android)
+# 06. Экстренная сеть: USB-модем и Realtek
 
-Используйте этот метод, если установщик Debian не видит сеть из-за драйвера Realtek RTL8125D.
+## Когда
+- Установщик: DHCP не удалась (02, шаг сети).
+- После установки: нет линка/адреса на встроенной Realtek RTL8125D (ревизия 0x689 может не поддерживаться ядром 6.12).
 
-## Шаг 1: Подготовка телефона
-1. Подключите телефон к ПК кабелем USB.
-2. Включите **Мобильный интернет**.
-3. В настройках включите **USB-модем** (USB Tethering).
+## Модем (Android)
+1. Кабель USB, мобильный интернет включён, Настройки - Точка доступа - USB-модем.
+2. Появляется интерфейс enx... или usb0.
+```bash
+ip -br link
+sudo ip link set enxXXXXXXXXXXXX up
+sudo dhclient -v enxXXXXXXXXXXXX
+ping -c 3 8.8.8.8
+```
+- dhclient отсутствует: добавить в /etc/network/interfaces строки allow-hotplug enx... и iface enx... inet dhcp, затем sudo ifup enx....
+- В установщике: подключить модем и нажать Повторить автоматическую настройку.
 
-## Шаг 2: Действия в терминале
-1. Проверьте интерфейс: `ip a` (ищите `enx...` или `usb0`).
-2. Запросите IP: `sudo dhclient -v <имя_интерфейса>`.
-3. Проверка: `ping -c 3 8.8.8.8`.
+## Лечение встроенной NIC
+- Этап А (07) ставит firmware-realtek и печатает диагностику ip -br link / lspci -nnk.
+- Если линка нет - ядро из backports (DKMS пересоберёт NVIDIA сам):
+```bash
+echo 'deb http://deb.debian.org/debian trixie-backports main contrib non-free non-free-firmware' > /etc/apt/sources.list.d/backports.list
+apt-get update
+apt-get -t trixie-backports install -y linux-image-amd64 linux-headers-amd64
+reboot
+```
+
+## Важно
+Модем - костыль: сервер получает адрес в подсети телефона, клиент с LAN туда не маршрутизируется, scp не дойдёт ([[09_Client_File_Delivery]]. Сняв телефон, сервер потеряет сеть - лечить NIC обязательно.
 
 ## Связи
 - [[02_Debian_Installation]]
-- [[03_System_Configuration]]
+- [[07_Automation_Scripts]]
+- [[09_Client_File_Delivery]]
+- [[10_Walkthrough_Manual]]
+

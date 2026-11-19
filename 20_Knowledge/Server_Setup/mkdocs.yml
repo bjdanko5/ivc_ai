@@ -23,6 +23,7 @@ nav:
     - 07. Скрипты автоматизации: 07_Automation_Scripts.md
     - 08. Профиль оборудования: 08_Hardware_Profile.md
     - 09. Доставка файлов с клиента: 09_Client_File_Delivery.md
+    - 10. Walkthrough (ручной режим): 10_Walkthrough_Manual.md
 
 markdown_extensions:
   - pymdownx.highlight:
