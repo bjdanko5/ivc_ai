@@ -13,16 +13,16 @@ tags: [knowledge, hardware, procurement]
 
 ## Состав закупки
 
-| № | Наименование | Кол-во | Цель |
-|---|-------------|--------|------|
-| 1 | AMD Ryzen 9 9900X BOX | 1 шт | Программирование, агентская генерация кода, ревью, тесты |
-| 2 | DDR5 UDIMM Silicon Power Xpower Zenith 64 ГБ [SP064GXLWU60AFDE] | 1 шт | Общая |
-| 3 | Кулер Arctic Freezer 36-S [ACFRE00194A] | 1 шт | Охлаждение CPU |
-| 4 | Материнская плата ASUS PRIME B850-PLUS-CSM | 1 шт | Платформа AM5 |
-| 5 | БП DEEPCOOL GamerStorm PN1000D [R-PNA00D-FC0B-WGEU-V2] | 1 шт | Питание 1000W |
-| 6 | NVMe Kingston NV3 1000 ГБ [SNV3S/1000G] | 1 шт | Модели + кэш |
-| 7 | GPU ASUS RTX 5070 Ti PRIME OC 16 GB [PRIME-RTX5070TI-O16G] | 1 шт | Инференс моделей |
-| 8 | Корпус Chieftec Night Hunter [GS-03B-BLK-OP] | 1 шт | Сборка |
+| №   | Наименование                                                    | Кол-во | Цель                                                     |
+| --- | --------------------------------------------------------------- | ------ | -------------------------------------------------------- |
+| 1   | AMD Ryzen 9 9900X BOX                                           | 1 шт   | Программирование, агентская генерация кода, ревью, тесты |
+| 2   | DDR5 UDIMM Silicon Power Xpower Zenith 64 ГБ [SP064GXLWU60AFDE] | 1 шт   | Общая                                                    |
+| 3   | Кулер Arctic Freezer 36-S [ACFRE00194A]                         | 1 шт   | Охлаждение CPU                                           |
+| 4   | Материнская плата ASUS PRIME B850-PLUS-CSM                      | 1 шт   | Платформа AM5                                            |
+| 5   | БП DEEPCOOL GamerStorm PN1000D [R-PNA00D-FC0B-WGEU-V2]          | 1 шт   | Питание 1000W                                            |
+| 6   | NVMe Kingston NV3 1000 ГБ [SNV3S/1000G]                         | 1 шт   | Модели + кэш                                             |
+| 7   | GPU ASUS RTX 5070 Ti PRIME OC 16 GB [PRIME-RTX5070TI-O16G]      | 1 шт   | Инференс моделей                                         |
+| 8   | Корпус Chieftec Night Hunter [GS-03B-BLK-OP]                    | 1 шт   | Сборка                                                   |
 
 ## Целевые задачи ИИ
 
