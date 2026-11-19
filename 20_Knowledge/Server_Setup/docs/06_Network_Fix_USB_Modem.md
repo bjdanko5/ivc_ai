@@ -1,10 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: network
+tags: [ivc_ai, server-setup, network, troubleshooting]
 created: 2026-11-19
 updated: 2026-11-19
-tags:
-  - server-setup
 ---
-
 # 06. Экстренная сеть: USB-модем и Realtek
 
 ## Когда

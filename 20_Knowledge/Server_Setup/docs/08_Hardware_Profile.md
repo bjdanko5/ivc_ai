@@ -1,10 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: hardware
+tags: [ivc_ai, server-setup, hardware, models]
 created: 2026-11-19
 updated: 2026-11-19
-tags:
-  - server-setup
 ---
-
 # 08. Hardware Profile (ivc_ai)
 
 Закупка оформлена, ожидается поставка. Состав и статус - [[hardware_procurement]] (вне этой папки).

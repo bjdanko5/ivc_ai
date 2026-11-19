@@ -1,10 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: models
+tags: [ivc_ai, server-setup, models, ai, llama]
 created: 2026-11-19
 updated: 2026-11-19
-tags:
-  - server-setup
 ---
-
 # 05. Инструменты ИИ (соответствие 07)
 
 ## Модель: NanoPlus

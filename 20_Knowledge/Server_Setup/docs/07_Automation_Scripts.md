@@ -1,14 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: automation
+tags: [ivc_ai, server-setup, automation, bash]
 created: 2026-11-19
 updated: 2026-11-19
-tags:
-  - automation
-  - bash
-  - nvidia
-  - docker
-  - ssh
 ---
-
 # Скрипты автоматизации настройки сервера
 
 ## Порядок работы (флоу)

@@ -1,10 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: installation
+tags: [ivc_ai, server-setup, installation, lvm]
 created: 2026-11-19
 updated: 2026-11-19
-tags:
-  - server-setup
 ---
-
 # 02. Установка Debian 13 (Trixie)
 
 ## Подготовка и загрузка

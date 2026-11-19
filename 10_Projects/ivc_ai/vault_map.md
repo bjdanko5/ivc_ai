@@ -1,36 +1,33 @@
 ---
-created: 2026-11-18
+type: project
+project: ivc_ai
+created: 2026-11-19
 updated: 2026-11-19
-tags:
-  - knowledge
-  - procurement
 ---
 
 # Карта vault: что куда класть
 
-| Папка | Назначение | Чем наполнять |
+| Папка/файл | Назначение | Чем наполнять |
 |---|---|---|
 | 20_Knowledge/Server_Setup/docs | источник правды по серверу (01-10) | правки по факту; 07 = команды |
-| 20_Knowledge корень | закупка + knowledge.base | статус закупки |
-| 10_Projects/ivc_ai | статус, решения, карта | project_state, vault_map |
-| 00_Inbox | сырые идеи и неразобранные выжимки | мысль сразу сюда |
-| 30_Chats | архив чатов | Obsidian Web Clipper |
-| 40_Cards | карточки скриптов | mkcard.py |
-| code/scripts, code/py | код проекта | VS Code |
+| 20_Knowledge корень | hardware_procurement + knowledge.base | статус закупки |
+| 10_Projects/ivc_ai | project_state, vault_map, site_ops, chat_playbook, ai_chat_rules | статус и эксплуатация |
+| 00_Inbox | сырые идеи | мысль сразу сюда |
+| 30_Chats | архив чатов | Web Clipper |
+| 40_Cards + code | карточки и код | mkcard.py; VS Code |
 | 90_Templates | шаблоны | mknote.py |
-| tools | утилиты vault | без нужды не трогать |
-| logs | отчёты (git-ignored) |自动生成 |
+| tools | утилиты vault, включая run_wiki_lan.py | без нужды не трогать |
+| logs | пусто (генерация отчётов отключена) | - |
 
-## Правила
-- Новые факты про сервер - только в docs/. Корневые заметки 20_Knowledge не плодить.
-- Инфраструктурные заметки заканчиваются блоком Связи.
-- Bases: в YAML только name/description/columns/sort; фильтры и колонки - через UI.
-
-## Почему knowledge.base не видел docs
-Фильтр папки в UI стоял на 20_Knowledge (точно), а заметки уехали в 20_Knowledge/Server_Setup/docs. Лечение в UI: фильтр file.folder contains 20_Knowledge (или снять фильтр папки), колонку file.folder добавить там же. YAML базы не менять.
+## Frontmatter и Bases
+- Схема: type / project / topic / tags / created / updated.
+- Примеры UI-фильтров: tags contains models; topic is hardware; file.folder contains Server_Setup/docs.
+- YAML базы: только name/description/columns/sort; фильтры и колонки - UI.
 
 ## Связи
 - [[project_state]]
+- [[site_ops]]
+- [[chat_playbook]]
+- [[ai_chat_rules]]
 - [[07_Automation_Scripts]]
-- [[hardware_procurement]]
 

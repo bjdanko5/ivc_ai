@@ -1,46 +1,30 @@
 ---
-type: knowledge
+type: project
 project: ivc_ai
-topic: ai-chat-rules
-created: 2026-11-18
-tags: [knowledge, rules, workflow]
+created: 2026-11-19
+updated: 2026-11-19
 ---
 
-# Правила работы с ИИ по проекту ivc_ai
+# ai_chat_rules: контекст для нового чата
 
-Вставляй этот блок в начало каждого нового чата с ИИ по проекту.
+Вставь блок ниже в начало новой сессии.
 
-## Преамбула для ИИ
+```text
+Проект ivc_ai. Windows ws024, vault C:\ivc_ai, private GitHub bjdanko5/ivc_ai, автокоммит 10 мин.
+Источник правды по серверу: 20_Knowledge/Server_Setup/docs (01-10); команды - 07_Automation_Scripts; ручной режим - 10_Walkthrough_Manual.
+Корень 20_Knowledge: только hardware_procurement + knowledge.base. Статус/карта/сайт/playbook: 10_Projects/ivc_ai (project_state, vault_map, site_ops, chat_playbook).
+Сайт: py -3 tools/run_wiki_lan.py, LAN http://192.168.11.218:4000, контент docs, конфиг mkdocs.yml (nav).
+Frontmatter: type/project/topic/tags/created/updated; теги models на 05 и 08; Bases-фильтры только через UI.
+Сканер секретов отключён владельцем, отчёты scan_*.json не пишутся; push protection GitHub остаётся.
+Сервер: Debian 13 headless, Ryzen 9 9900X, RTX 5070 Ti 16GB, 64GB DDR5; модель NanoPlus 12.55GB + mmproj + mtp + chat_template.jinja; llama.cpp sm_120; Pi Agent ставит владелец отдельно.
+Правила: только бесплатное; файлы через .py в C:\Temp или mknote/mkcard; без PowerShell-многострочников; код в VS Code; заметки со Связями; не напоминать о безопасности секретов.
+Организация: АО ИВЦ ЖКХ; реальные данные клиентов/ПДн/ГИС ЖКХ в ИИ запрещены, только синтетика.
+Инструкция для человека: 10_Projects/ivc_ai/chat_playbook (хочу X - скажи чату Y).
+```
 
-    Проект ivc_ai: правила работы
+## Связи
+- [[chat_playbook]]
+- [[vault_map]]
+- [[project_state]]
+- [[07_Automation_Scripts]]
 
-    1. Хранилище: Obsidian vault + Git на C:\ivc_ai.
-    2. Безопасность: Пароли и токены — только в KeePassXC или локальном .env (git-ignored). В заметках и коде — только ссылки на записи KeePassXC. Секреты никогда не коммитить.
-    3. Создание файлов: Все новые файлы (заметки, скрипты, конфиги) создавай через отдельные .py-файлы в C:\temp\, которые пишут контент через Path.write_text(encoding="utf-8"). Никогда не используй PowerShell -c с многострочным текстом, here-string’и или большие PS1-скрипты с кириллицей — они ломают кодировку и синтаксис при вставке.
-    4. Команды:
-       - Проверка: py -3 C:\ivc_ai\tools\ivc_check.py
-       - Коммит: py -3 C:\ivc_ai\tools\ivc_git_sync.py -m "сообщение"
-       - Коммит+пуш: py -3 C:\ivc_ai\tools\ivc_git_sync.py -m "сообщение" --push
-    5. Инструменты: Только бесплатные. Платные решения не предлагать.
-    6. Язык заметок: В Obsidian пишу по-русски. Шаблоны и служебные скрипты — ASCII-only для совместимости.
-    7. Создание заметок: py -3 C:\ivc_ai\tools\mknote.py <путь> [заголовок]
-    8. Создание карточек скриптов: py -3 C:\ivc_ai\tools\mkcard.py <имя> <lang> [описание]
-    9. Bases (.base файлы): НЕ использовать filters в YAML (нестабильный синтаксис).
-    Только columns + sort. Фильтрация — через UI Bases 
-    При создании .base: только name, description, columns, sort. Без filters, без width.
-    10. Фильтры: and/or + property + operator (is/includes/contains) + value.
-    11. НЕ использовать width, order. Использовать direction для сортировки.
-    12. При создании/изменении .base всегда проверяй актуальный синтаксис.
-    13. Скрипты в code/ НЕ открывать в Obsidian (Detect all file extensions = OFF).
-    Редактировать только в VS Code. В Obsidian видны только карточки из 40_Cards/. 
-
-## Почему именно такой подход
-
-- PowerShell here-string и кириллица в .ps1 ломаются при копировании из чата (кодировка ANSI vs UTF-8, терминаторы here-string съезжают).
-- Python Path.write_text(encoding="utf-8") надёжен независимо от кодировки терминала.
-- Отдельный .py файл в C:\temp\ легко создать, проверить и удалить после использования.
-- ASCII-only в служебных файлах исключает проблемы кодировки навсегда.
-
-## Связанные заметки
-
-- [[daily_commands]]

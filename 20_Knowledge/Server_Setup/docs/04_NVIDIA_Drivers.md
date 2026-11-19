@@ -1,10 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: nvidia
+tags: [ivc_ai, server-setup, nvidia, cuda]
 created: 2026-11-19
 updated: 2026-11-19
-tags:
-  - server-setup
 ---
-
 # 04. Драйверы NVIDIA и CUDA (соответствие 07)
 
 ## Предпосылки

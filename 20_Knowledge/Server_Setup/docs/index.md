@@ -1,10 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: overview
+tags: [ivc_ai, server-setup, overview]
 created: 2026-11-19
 updated: 2026-11-19
-tags:
-  - server-setup
 ---
-
 # ivc_ai: сервер ИИ, руководство
 
 Правило: [[07_Automation_Scripts]] - единственный источник правды по командам и порядку. Остальные заметки - пояснения и факты. [[10_Walkthrough_Manual]] - тот же флоу вручную, по шагам.

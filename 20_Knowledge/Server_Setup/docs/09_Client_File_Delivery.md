@@ -1,10 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: delivery
+tags: [ivc_ai, server-setup, delivery, ssh, windows]
 created: 2026-11-19
 updated: 2026-11-19
-tags:
-  - server-setup
 ---
-
 # 09. Доставка файлов с клиента (Windows)
 
 ## Что где лежит

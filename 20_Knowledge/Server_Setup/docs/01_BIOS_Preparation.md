@@ -1,10 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: bios
+tags: [ivc_ai, server-setup, hardware, bios]
 created: 2026-11-19
 updated: 2026-11-19
-tags:
-  - server-setup
 ---
-
 # 01. BIOS (ASUS PRIME B850-PLUS-CSM)
 
 ## Прошивка

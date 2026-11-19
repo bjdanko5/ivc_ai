@@ -1,11 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: procurement
+tags: [ivc_ai, hardware, procurement]
 created: 2026-11-18
 updated: 2026-11-19
-tags:
-  - knowledge
-  - procurement
 ---
-
 # Заявка на закупку (ivc_ai)
 
 Инициатор: С.В. Дуванский. Телефон: +7 (863) 263-60-13.

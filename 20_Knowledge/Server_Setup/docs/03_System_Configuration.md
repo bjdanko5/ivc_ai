@@ -1,11 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: system
+tags: [ivc_ai, server-setup, system, ssh, network]
 created: 2026-11-18
 updated: 2026-11-19
-tags:
-  - knowledge
-  - procurement
 ---
-
 # 03. Базовая настройка системы (соответствие 07)
 
 Источник правды - [[07_Automation_Scripts]]. Ручные команды по шагам - [[10_Walkthrough_Manual]].

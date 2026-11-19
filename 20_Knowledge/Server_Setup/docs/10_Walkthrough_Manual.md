@@ -1,10 +1,11 @@
 ---
+type: knowledge
+project: ivc_ai
+topic: walkthrough
+tags: [ivc_ai, server-setup, walkthrough, manual]
 created: 2026-11-19
 updated: 2026-11-19
-tags:
-  - server-setup
 ---
-
 # 10. Walkthrough: ручной режим
 
 Каждый шаг - отдельный блок: команда, проверка, если не так. Автоматический эквивалент - [[07_Automation_Scripts]] (источник правды). Порядок блоков совпадает с этапами 07.
