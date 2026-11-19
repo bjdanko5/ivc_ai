@@ -6,20 +6,39 @@ tags:
   - bash
   - nvidia
   - docker
+  - ssh
 ---
 
 # Скрипты автоматизации настройки сервера
 
-**Запускать из /var/tmp** (не из /home — он перемонтируется в процессе):
-1. Сохранить скрипты: `nano /var/tmp/setup_part1.sh` и `nano /var/tmp/setup_part2.sh`
-2. Этап А: `sudo bash /var/tmp/setup_part1.sh` (в конце — перезагрузка)
-3. Положить публичный SSH-ключ в `~/ssh_pubkey_to_add.pub`
-4. Этап Б: `sudo bash /var/tmp/setup_part2.sh`
+## Порядок работы (флоу)
+1. BIOS ([[01_BIOS_Preparation]]), установка Debian с галкой SSH server ([[02_Debian_Installation]]).
+2. Нет сети - USB-модем с консоли ([[06_Network_Fix_USB_Modem]]).
+3. С клиента: `ssh user@IP` по паролю. Скрипты положить в `/var/tmp/` (scp или nano).
+4. На сервере: публичный ключ клиента в `~/ssh_pubkey_to_add.pub` (одна строка ssh-ed25519/ssh-rsa).
+5. Этап А: `sudo bash /var/tmp/setup_part1.sh`. Ставит firmware-realtek, openssh, KillMode=process (upgrade не убьёт сессию), ключ, драйвер, CUDA. Перезагрузка.
+6. С клиента: `ssh -i ключ user@IP` - вход по ключу.
+7. Этап Б: `sudo bash /var/tmp/setup_part2.sh`. Диски+миграция home, затем подтверждение ключевого входа и отключение паролей (reload), Docker, языки, llama.cpp, модель, юнит llama-server.
 
-Лог обоих этапов: `/var/log/ivc_ai_setup.log`. При ошибке скрипт останавливается и печатает номер строки.
+Лог: `/var/log/ivc_ai_setup.log`. Ошибка = стоп с номером строки. Повторный запуск безопасен.
+Бэкап старого home: `/var/tmp/ivc_home_old` (вне /home, не перекрывается монтированием).
+
+## Сеть: Realtek RTL8125D (контингентность)
+Этап А ставит `firmware-realtek`. Если встроенная NIC ревизии 0x689 не поднимается ядром 6.12 - USB-модем является костылём: сняв телефон, сервер потеряет сеть. Запасной путь - ядро из backports (DKMS пересоберёт драйвер автоматически):
+
+```bash
+echo 'deb http://deb.debian.org/debian trixie-backports main contrib non-free non-free-firmware' > /etc/apt/sources.list.d/backports.list
+apt-get update
+apt-get -t trixie-backports install -y linux-image-amd64 linux-headers-amd64
+reboot
+```
+
+## Запуск инференса: математика VRAM
+Q5_K_M = ~24 ГБ весов. VRAM = 16 ГБ. Полностью на GPU НЕ влезает (таблица VRAM в [[08_Hardware_Profile]] занижена - MoE держит все веса в памяти). Рабочая схема: attention/shared на GPU (~5-8 ГБ с KV 8K), expert-тензоры в RAM (64 ГБ хватает). Launcher использует `-ngl 999 -ot "exps=CPU"`. Скорость определяется CPU/RAM для active ~3B.
+
+Юнит `llama-server.service` включён; стартует только при наличии gguf (`ConditionPathExistsGlob`). Health: `curl http://127.0.0.1:8080/health`. Клиент: `ssh -L 8080:127.0.0.1:8080 user@IP`.
 
 ## Этап А: до первой перезагрузки
-Сеть проверяется через apt (HTTP). ca-certificates/curl/wget ставятся ДО любого HTTPS. Драйвер pinned-ветки 620 + CUDA Toolkit (nvcc) из NVIDIA-репо.
 
 ```bash
 #!/bin/bash
@@ -35,17 +54,39 @@ if [ "$EUID" -ne 0 ]; then echo "[!] Запустите: sudo bash /var/tmp/setu
 REAL_USER="${SUDO_USER:-}"
 if [ -z "$REAL_USER" ]; then REAL_USER="$(logname 2>/dev/null || true)"; fi
 if [ -z "$REAL_USER" ] || [ "$REAL_USER" = "root" ]; then REAL_USER="$(getent passwd 1000 | cut -d: -f1)"; fi
-if [ -z "$REAL_USER" ] || [ "$REAL_USER" = "root" ]; then echo "[!] Не определён обычный пользователь. Запустите через sudo из-под своего логина."; exit 1; fi
+if [ -z "$REAL_USER" ] || [ "$REAL_USER" = "root" ]; then echo "[!] Не определён обычный пользователь."; exit 1; fi
 REAL_HOME="$(getent passwd "$REAL_USER" | cut -d: -f6)"
 echo "[+] Пользователь: $REAL_USER ($REAL_HOME)"
 
-# 1. Сеть проверяем через apt (HTTP-зеркало, ca-certificates ещё не нужен)
-if ! apt-get update; then echo "[!] Нет сети. Подключите USB-модем (заметка 06) и повторите."; exit 1; fi
+# 1. Сеть через apt (HTTP, ca-certificates ещё не нужен)
+if ! apt-get update; then echo "[!] Нет сети. USB-модем (заметка 06), затем повторите."; exit 1; fi
 
-# 2. Базовые утилиты ДО любого HTTPS
-apt-get install -y ca-certificates curl wget
+# 2. База + SSH-сервер + firmware для Realtek ДО любого HTTPS/upgrade
+apt-get install -y ca-certificates curl wget openssh-server firmware-realtek
+systemctl enable --now ssh
 
-# 3. Компоненты репозиториев
+# 3. KillMode=process СРАЗУ: будущие restart sshd (needrestart при upgrade) не убьют сессию
+mkdir -p /etc/systemd/system/ssh.service.d
+printf '%s\n' '[Service]' 'KillMode=process' > /etc/systemd/system/ssh.service.d/killmode.conf
+systemctl daemon-reload
+
+# 4. Ранний SSH-ключ: добавляем, пароли НЕ трогаем
+PUB="$REAL_HOME/ssh_pubkey_to_add.pub"
+if [ -s "$PUB" ] && grep -qE '^(ssh-|ecdsa-|sk-)' "$PUB"; then
+    install -d -m 700 -o "$REAL_USER" -g "$REAL_USER" "$REAL_HOME/.ssh"
+    touch "$REAL_HOME/.ssh/authorized_keys"
+    while IFS= read -r line; do
+        grep -qxF "$line" "$REAL_HOME/.ssh/authorized_keys" || echo "$line" >> "$REAL_HOME/.ssh/authorized_keys"
+    done < "$PUB"
+    chmod 600 "$REAL_HOME/.ssh/authorized_keys"
+    chown "$REAL_USER:$REAL_USER" "$REAL_HOME/.ssh/authorized_keys"
+    systemctl reload ssh
+    echo "[+] Ключ добавлен. Пароли пока включены. Проверьте с клиента: ssh $REAL_USER@<IP>"
+else
+    echo "[!] Ключ не найден ($PUB). Продолжаем; добавьте ключ и повторите скрипт позже."
+fi
+
+# 5. Компоненты репозиториев
 if [ -f /etc/apt/sources.list.d/debian.sources ]; then
     sed -i 's/^Components:.*/Components: main contrib non-free non-free-firmware/' /etc/apt/sources.list.d/debian.sources
 else
@@ -54,13 +95,18 @@ fi
 apt-get update
 apt-get upgrade -y
 
-# 4. Toolchain (libcurl4-openssl-dev нужен llama.cpp)
+# 6. Диагностика встроенной NIC (RTL8125D rev B может не поддерживаться ядром 6.12)
+ip -br link || true
+lspci -nnk | grep -A3 -i ethernet || true
+echo "[i] Если встроенная Realtek без линка: см. раздел 'Сеть: Realtek' в этой заметке (backports-ядро)."
+
+# 7. Toolchain (libcurl4-openssl-dev нужен llama.cpp)
 apt-get install -y linux-headers-amd64 build-essential dkms pkg-config git cmake ninja-build libssl-dev libcurl4-openssl-dev rsync zip gdb python3 python3-venv python3-dev
 
-# 5. /tmp в trixie = tmpfs; переводим на диск (生效 после перезагрузки)
+# 8. /tmp в trixie = tmpfs -> на диск (действует после перезагрузки)
 systemctl mask tmp.mount
 
-# 6. Репозиторий NVIDIA + драйвер (compute-only)
+# 9. NVIDIA repo + драйвер compute-only
 TEMP_DIR=/var/cache/ivc_ai_install
 mkdir -p "$TEMP_DIR"
 cd "$TEMP_DIR"
@@ -75,18 +121,19 @@ apt-get install -y nvidia-driver-pinning-620
 apt-get update
 apt-get install -y nvidia-driver-cuda nvidia-kernel-open-dkms
 
-# 7. CUDA Toolkit (nvcc!) из NVIDIA-репо, НЕ debian-овский nvidia-cuda-toolkit
+# 10. CUDA Toolkit (nvcc) из NVIDIA-репо
 apt-get install -y cuda-toolkit
 /usr/local/cuda/bin/nvcc --version
 
 dkms status || true
-echo "=== ЭТАП А ЗАВЕРШЁН. После перезагрузки: sudo bash /var/tmp/setup_part2.sh ==="
+echo "=== ЭТАП А ЗАВЕРШЁН ==="
+echo "После перезагрузки: войти по SSH по ключу, затем sudo bash /var/tmp/setup_part2.sh"
+sync
 read -r -p "Enter для перезагрузки..."
 reboot
 ```
 
 ## Этап Б: после перезагрузки
-Тома (с миграцией старого home), TRIM, zram, SSH-ключ, Docker + GPU, nvm/pnpm/uv, llama.cpp (sm_120), модель Q5_K_M (все шарды, wget -c).
 
 ```bash
 #!/bin/bash
@@ -109,15 +156,18 @@ echo "[+] Пользователь: $REAL_USER ($REAL_HOME)"
 if ! nvidia-smi; then echo "[!] Драйвер не активен: Secure Boot (заметка 01)? dkms status?"; exit 1; fi
 /usr/local/cuda/bin/nvcc --version
 
-# 2. Тома lv_docker / lv_home (идемпотентно)
+# 2. Тома + миграция старого home ВНЕ /home (иначе бэкап уйдёт под монтирование)
 if mountpoint -q /home && mountpoint -q /var/lib/docker; then
-    echo "[+] Тома уже смонтированы — форматирование пропущено."
+    echo "[+] Тома уже смонтированы - форматирование пропущено."
 else
     echo "[!] Будут отформатированы lv_docker и lv_home. Данные уничтожаются."
     read -r -p "Введите yes: " CONFIRM
     [ "$CONFIRM" = "yes" ] || { echo "Отмена."; exit 1; }
-    [ -b /dev/vg0/lv_docker ] && [ -b /dev/vg0/lv_home ] || { echo "[!] LV не найдены. Проверьте разметку (заметка 02)."; exit 1; }
-    if [ -d "$REAL_HOME" ] && ! mountpoint -q /home; then mv "$REAL_HOME" "${REAL_HOME}.old-on-root"; fi
+    [ -b /dev/vg0/lv_docker ] && [ -b /dev/vg0/lv_home ] || { echo "[!] LV не найдены (заметка 02)."; exit 1; }
+    if [ -d "$REAL_HOME" ] && ! mountpoint -q /home; then
+        [ -e /var/tmp/ivc_home_old ] && { echo "[!] /var/tmp/ivc_home_old уже есть (прошлый прогон?). Разберите вручную."; exit 1; }
+        mv "$REAL_HOME" /var/tmp/ivc_home_old
+    fi
     umount -l /home 2>/dev/null || true
     umount -l /var/lib/docker 2>/dev/null || true
     mkfs.ext4 -F -m 1 -L docker /dev/vg0/lv_docker
@@ -127,11 +177,35 @@ else
     mkdir -p /var/lib/docker /home
     mount -a
     mkdir -p "$REAL_HOME"
-    if [ -d "${REAL_HOME}.old-on-root" ]; then rsync -a "${REAL_HOME}.old-on-root/" "$REAL_HOME/"; echo "[+] Старый home перенесён. Резерв: ${REAL_HOME}.old-on-root (удалите вручную позже)."; fi
+    if [ -d /var/tmp/ivc_home_old ]; then rsync -a /var/tmp/ivc_home_old/ "$REAL_HOME/"; echo "[+] Старый home перенесён. Бэкап: /var/tmp/ivc_home_old (удалите вручную позже)."; fi
     chown -R "$REAL_USER:$REAL_USER" "$REAL_HOME"
 fi
 
-# 3. Артефакты Этапа А -> в home (не удаляем)
+# 3. SSH hardening ПОСЛЕ миграции: проверяем ключ на финальном home
+AK="$REAL_HOME/.ssh/authorized_keys"
+if [ -s "$AK" ] && grep -qE '^(ssh-|ecdsa-|sk-)' "$AK"; then
+    echo "[+] ОТКРОЙТЕ НОВОЕ окно на клиенте и войдите по ключу: ssh $REAL_USER@<IP>"
+    read -r -p "Вход по ключу в новом окне прошёл без пароля? yes/no: " SSH_OK
+    if [ "$SSH_OK" = "yes" ]; then
+        cp -a /etc/ssh/sshd_config "/etc/ssh/sshd_config.bak.$(date +%Y%m%d%H%M%S)"
+        mkdir -p /etc/ssh/sshd_config.d
+        printf '%s\n' 'PasswordAuthentication no' 'KbdInteractiveAuthentication no' 'PubkeyAuthentication yes' > /etc/ssh/sshd_config.d/99-ivc-hardening.conf
+        sed -i -E 's/^#?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+        mkdir -p /etc/systemd/system/ssh.service.d
+        printf '%s\n' '[Service]' 'KillMode=process' > /etc/systemd/system/ssh.service.d/killmode.conf
+        systemctl daemon-reload
+        sshd -t
+        systemctl reload ssh
+        python3 -c 'import socket; s=socket.create_connection(("127.0.0.1",22),5); print("[+] sshd отвечает:", s.recv(64).decode().strip()); s.close()'
+        echo "[+] Парольный вход отключён. Текущая сессия сохранена."
+    else
+        echo "[!] Hardening пропущен. Исправьте ключевой вход и повторите скрипт."
+    fi
+else
+    echo "[!] authorized_keys пуст. Положите ключ в ~/ssh_pubkey_to_add.pub и повторите Этап А. Пароли сохранены."
+fi
+
+# 4. Артефакты Этапа А -> в home
 if [ -d /var/cache/ivc_ai_install ]; then
     mkdir -p "$REAL_HOME/downloads/install_backup"
     mv /var/cache/ivc_ai_install/* "$REAL_HOME/downloads/install_backup/" 2>/dev/null || true
@@ -139,14 +213,14 @@ if [ -d /var/cache/ivc_ai_install ]; then
     chown -R "$REAL_USER:$REAL_USER" "$REAL_HOME/downloads"
 fi
 
-# 4. Каталоги: большие данные на lv_home, /opt/ivc_ai — симлинки
+# 5. Каталоги: большие данные на lv_home, /opt/ivc_ai - симлинки
 sudo -u "$REAL_USER" -H bash -c 'mkdir -p ~/src ~/downloads ~/models ~/projects'
 mkdir -p /opt/ivc_ai/pi /opt/ivc_ai/logs
 ln -sfn "$REAL_HOME/models" /opt/ivc_ai/models
 ln -sfn "$REAL_HOME/src/llama.cpp" /opt/ivc_ai/llama.cpp
 chown -R "$REAL_USER:$REAL_USER" /opt/ivc_ai
 
-# 5. TRIM + zram + sysctl
+# 6. TRIM + zram + sysctl
 systemctl enable --now fstrim.timer
 apt-get install -y systemd-zram-generator
 cat > /etc/systemd/zram-generator.conf <<'EOF'
@@ -161,22 +235,7 @@ echo 'vm.page-cluster=0' >> /etc/sysctl.d/99-ivc-ai.conf
 sysctl --system >/dev/null
 swapon --show
 
-# 6. SSH: ключ из ~/ssh_pubkey_to_add.pub, валидация ДО отключения паролей
-PUB="$REAL_HOME/ssh_pubkey_to_add.pub"
-if [ -s "$PUB" ] && grep -qE '^(ssh-|ecdsa-|sk-)' "$PUB"; then
-    sudo -u "$REAL_USER" -H bash -c 'mkdir -p ~/.ssh'
-    chmod 700 "$REAL_HOME/.ssh"
-    cat "$PUB" >> "$REAL_HOME/.ssh/authorized_keys"
-    chmod 600 "$REAL_HOME/.ssh/authorized_keys"
-    chown -R "$REAL_USER:$REAL_USER" "$REAL_HOME/.ssh"
-    sed -i -E 's/^#?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-    systemctl restart ssh
-    echo "[+] Ключ добавлен, вход по паролю отключён."
-else
-    echo "[!] Ключ не найден/пуст ($PUB) — парольный вход НЕ отключён."
-fi
-
-# 7. Docker (ключ .asc, gnupg не нужен)
+# 7. Docker
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc
@@ -203,7 +262,7 @@ systemctl restart docker
 usermod -aG docker "$REAL_USER"
 docker --version
 
-# 8. NVIDIA Container Toolkit (armored-ключ .asc, без gpg)
+# 8. NVIDIA Container Toolkit
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey -o /usr/share/keyrings/nvidia-container-toolkit.asc
 echo "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit.asc] https://nvidia.github.io/libnvidia-container/stable/deb/$(dpkg --print-architecture) /" > /etc/apt/sources.list.d/nvidia-container-toolkit.list
 apt-get update
@@ -211,17 +270,17 @@ apt-get install -y nvidia-container-toolkit
 nvidia-ctk runtime configure --runtime=docker
 systemctl restart docker
 
-# 9. Инструменты пользователя (nvm/pnpm/uv ставятся в его home)
+# 9. Инструменты пользователя
 sudo -u "$REAL_USER" -H bash -c 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.41.0/install.sh | bash'
 sudo -u "$REAL_USER" -H bash -c 'export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; nvm install --lts; nvm alias default "lts/*"'
 sudo -u "$REAL_USER" -H bash -c 'curl -fsSL https://get.pnpm.io | sh -'
 sudo -u "$REAL_USER" -H bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
 
-# 10. llama.cpp: nvcc из /usr/local/cuda, arch 120 (Blackwell)
+# 10. llama.cpp (sm_120)
 sudo -u "$REAL_USER" -H bash -c 'export PATH=/usr/local/cuda/bin:$PATH; cd ~/src; if [ ! -d llama.cpp ]; then git clone --depth 1 https://github.com/ggml-org/llama.cpp; fi; cd llama.cpp; cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=120 -DCMAKE_BUILD_TYPE=Release; cmake --build build --config Release --target llama-cli llama-server llama-bench -j"$(nproc)"'
 sudo -u "$REAL_USER" -H bash -c '~/src/llama.cpp/build/bin/llama-cli --version'
 
-# 11. Модель: список файлов через HF API (возможны шарды), wget с докачкой
+# 11. Модель (опционально, все шарды Q5_K_M, wget -c)
 read -r -p "Скачать модель Q5_K_M (~24 ГБ) с Hugging Face? yes/no: " DL_MODEL
 if [ "$DL_MODEL" = "yes" ]; then
     AVAIL_KB=$(df -Pk "$REAL_HOME" | awk 'NR==2 {print $4}')
@@ -238,21 +297,69 @@ if [ "$DL_MODEL" = "yes" ]; then
     ls -lh "$REAL_HOME/models"
 fi
 
+# 12. Launcher + systemd-юнит. Q5_K_M ~24 ГБ > 16 ГБ VRAM:
+#     attention/shared на GPU, expert-тензоры в RAM (-ot exps=CPU).
+cat > /opt/ivc_ai/run-llama-server.sh <<'SH'
+#!/bin/bash
+set -euo pipefail
+MODEL="$(ls -1 /opt/ivc_ai/models/*.gguf 2>/dev/null | sort | head -n1)"
+[ -n "$MODEL" ] || { echo "no gguf in /opt/ivc_ai/models"; exit 1; }
+exec /opt/ivc_ai/llama.cpp/build/bin/llama-server -m "$MODEL" -ngl 999 -ot "exps=CPU" -c 8192 --jinja --host 127.0.0.1 --port 8080
+SH
+chmod 755 /opt/ivc_ai/run-llama-server.sh
+cat > /etc/systemd/system/llama-server.service <<EOF
+[Unit]
+Description=ivc_ai llama-server (MoE hybrid offload)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExistsGlob=/opt/ivc_ai/models/*.gguf
+
+[Service]
+Type=simple
+User=$REAL_USER
+Group=$REAL_USER
+ExecStart=/bin/bash /opt/ivc_ai/run-llama-server.sh
+Restart=on-failure
+RestartSec=5
+Nice=-5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
+systemctl enable llama-server
+if ls /opt/ivc_ai/models/*.gguf >/dev/null 2>&1; then
+    systemctl start llama-server
+    ok=0
+    for i in $(seq 1 60); do
+        if curl -sf --max-time 3 http://127.0.0.1:8080/health >/dev/null; then ok=1; break; fi
+        sleep 3
+    done
+    if [ "$ok" = 1 ]; then echo "[+] llama-server здоров: http://127.0.0.1:8080"; else echo "[!] Не поднялся за 180с: journalctl -u llama-server -n 50"; fi
+else
+    echo "[+] Модели нет - юнит включён, стартует после появления gguf: systemctl start llama-server"
+fi
+
+# 13. Финал: сетевая идентичность
+ip -br addr || true
+echo "[i] IP сервера: $(hostname -I)"
+echo "[i] Если IP по DHCP меняется - закрепите аренду на роутере."
+echo "[i] Клиент: ssh -L 8080:127.0.0.1:8080 $REAL_USER@<IP>, затем http://127.0.0.1:8080"
 echo "=== ЭТАП Б ЗАВЕРШЁН ==="
 echo "Перелогиньтесь (или newgrp docker) для группы docker и PATH nvm/pnpm/uv."
 ```
 
 ## Что проверяется автоматически
-- Сеть и зеркала (apt update), наличие keyring-файла, наличие pinning-пакета
-- nvcc --version, nvidia-smi, dkms status
-- Существование LV, смонтированность томов (повторный запуск безопасен)
-- Формат SSH-ключа до отключения парольного входа
-- Свободное место (>30 ГБ) перед скачиванием модели
-- llama-cli --version, swapon --show, docker --version
+- Сеть/зеркала (apt update), keyring-файл, наличие pinning-пакета, nvcc, nvidia-smi, dkms status
+- Ключевой вход подтверждается вручную ДО отключения паролей; sshd -t; живой TCP к sshd после reload
+- Существование LV, смонтированность томов, защита от затирания бэкапа home
+- Свободное место (>30 ГБ) перед моделью; llama-cli --version; swapon --show; docker --version
+- llama-server /health (до 180 с ожидания загрузки весов)
 
 ## Связи
 - [[01_BIOS_Preparation]]
 - [[02_Debian_Installation]]
+- [[03_System_Configuration]]
 - [[04_NVIDIA_Drivers]]
 - [[05_AI_Tools_Setup]]
 - [[06_Network_Fix_USB_Modem]]
