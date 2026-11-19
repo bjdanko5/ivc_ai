@@ -8,7 +8,8 @@ updated: 2026-11-19
 ---
 # 03. Базовая настройка системы (соответствие 07)
 
-Источник правды - [[07_Automation_Scripts]]. Ручные команды по шагам - [[10_Walkthrough_Manual]].
+Источник правды - [[07_Automation_Scripts]]
+- [[11_Memory_and_Zram]]. Ручные команды по шагам - [[10_Walkthrough_Manual]].
 
 ## Почему Debian, а не Windows
 - Нативная CUDA без WSL-overhead.

@@ -39,5 +39,6 @@ bge-m3 FP16 (~2 ГБ) - отложено: бюджет VRAM занят веса�
 - [[04_NVIDIA_Drivers]]
 - [[07_Automation_Scripts]]
 - [[08_Hardware_Profile]]
+- [[11_Memory_and_Zram]]
 - [[10_Walkthrough_Manual]]
 

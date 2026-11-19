@@ -38,6 +38,7 @@ OS+софт ~100 ГБ (lv_root 60 + lv_var 30), модели NanoPlus ~14 ГБ, 
 ## Связи
 - [[07_Automation_Scripts]]
 - [[05_AI_Tools_Setup]]
+- [[11_Memory_and_Zram]]
 - [[02_Debian_Installation]]
 - [[10_Walkthrough_Manual]]
 
